@@ -1,0 +1,4 @@
+valeria-env/
+dependencies/llama.cpp/
+dependencies/whisper.cpp
+tests/voice/*
