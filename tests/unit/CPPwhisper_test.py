@@ -1,9 +1,9 @@
 import os
 from pywhispercpp.model import Model
 
-# Define paths
-model_path = "/media/panos/C/projects/Valeria_assistant/whisper.cpp/models/ggml-large-v3-turbo-q5_0.bin"  # Replace with your actual model path
-audio_path = "/media/panos/C/projects/Valeria_assistant/tests/voice/Take1_Voice2_gr-en.wav"                # Replace with your actual audio file path
+
+model_path = "....."
+audio_path = "....."
 
 # Check if files exist
 if not os.path.isfile(model_path):
