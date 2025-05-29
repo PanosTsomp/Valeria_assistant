@@ -4,3 +4,4 @@ dependencies/whisper.cpp
 tests/voice/*
 models/*
 build/*
+.vscode
