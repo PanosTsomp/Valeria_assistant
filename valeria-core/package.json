@@ -1,13 +1,15 @@
 {
   "name": "@valeria/core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
-  "author": "",
+  "author": "Panagiotis Ilias Tsompanoglou GitHub:https://github.com/PanosTsomp",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module"
 }
