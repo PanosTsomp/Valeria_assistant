@@ -88,3 +88,20 @@ export class Conversation {
   getHistory(): Message[] {
     return [...this.messages];
   }
+
+  /**
+   * Get the number of user/assistant messages (excludes system prompt).
+   */
+  getLength(): number {
+    return this.messages.length;
+  }
+
+  /**
+   * Clear all conversation history but keep the system prompt.
+   * Like starting a new conversation with the same personality.
+   */
+  clear(): void {
+    this.messages = [];
+  }
+
+  
