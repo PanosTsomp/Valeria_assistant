@@ -104,4 +104,86 @@ export class Conversation {
     this.messages = [];
   }
 
-  
+  /**
+   * Trim the conversation history to fit within a token budget.
+   * 
+   * WHY THIS IS NEEDED:
+   * LLMs have a fixed context window (e.g., 2048 tokens for our setup).
+   * The system prompt, conversation history, AND the model's response
+   * all need to fit inside this window. If the history is too long,
+   * the model either crashes, produces garbage, or silently ignores
+   * the oldest context.
+   * 
+   * HOW IT WORKS:
+   * We use a rough approximation: 1 token ≈ 4 characters in English.
+   * This isn't exact (tokenizers split text differently), but it's
+   * close enough for trimming decisions. We remove the OLDEST
+   * user/assistant pairs first, always keeping the system prompt
+   * and the most recent messages.
+   * 
+   * WHY PAIRS:
+   * We remove messages in user+assistant pairs to keep the conversation
+   * coherent. If we removed just the user message but kept the assistant
+   * response, the LLM would see an answer with no question — confusing.
+   * 
+   * @param maxTokens - Maximum total tokens for the conversation
+   *   (including system prompt). A safe default is contextSize - maxTokens
+   *   to leave room for the model's response.
+   */
+  trimHistory(maxTokens: number): void {
+    const estimateTokens = (text: string): number => {
+      return Math.ceil(text.length / 4);
+    };
+
+    const systemTokens = estimateTokens(this.systemPrompt.content);
+
+    // If the system prompt alone exceeds the budget, we can't do anything
+    if (systemTokens >= maxTokens) {
+      this.messages = [];
+      return;
+    }
+
+    let totalTokens = systemTokens;
+
+    // Count tokens from the end (most recent messages) backward
+    // We want to KEEP recent messages and DROP old ones
+    let keepFromIndex = this.messages.length;
+
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const msgTokens = estimateTokens(this.messages[i].content);
+      if (totalTokens + msgTokens > maxTokens) {
+        break;
+      }
+      totalTokens += msgTokens;
+      keepFromIndex = i;
+    }
+
+    // Adjust to keep complete pairs (user + assistant)
+    // If we're starting from an assistant message, step back one more
+    // to include its corresponding user message
+    if (
+      keepFromIndex < this.messages.length &&
+      this.messages[keepFromIndex].role === 'assistant' &&
+      keepFromIndex > 0
+    ) {
+      keepFromIndex--;
+      // Recheck: does including this user message still fit?
+      const extraTokens = estimateTokens(
+        this.messages[keepFromIndex].content
+      );
+      if (totalTokens + extraTokens > maxTokens) {
+        keepFromIndex++; // Doesn't fit, drop the pair
+      }
+    }
+
+    this.messages = this.messages.slice(keepFromIndex);
+  }
+
+  /**
+   * Get the last message in the conversation, or undefined if empty.
+   * Useful for checking what Valeria last said.
+   */
+  getLastMessage(): Message | undefined {
+    return this.messages[this.messages.length - 1];
+  }
+}
