@@ -42,19 +42,6 @@ export interface STTEngine {
 
 
 /**
- * Speech-to-Text engine interface.
- * 
- * Desktop will implement this with @fugood/whisper.node
- * Mobile will implement this with whisper.rn
- * Tests will implement this with a mock that returns preset text
- */
-export interface STTEngine {
-  initialize(modelPath: string): Promise<void>;
-  transcribe(audio: Float32Array): Promise<string>;
-  dispose(): void;
-}
-
-/**
  * Large Language Model engine interface.
  * 
  * Desktop will implement this with node-llama-cpp
