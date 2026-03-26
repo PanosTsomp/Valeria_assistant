@@ -53,7 +53,7 @@ export interface PipelineCallbacks {
  * 
  * 1. Dependency injection: The pipeline receives its engines through
  *    the constructor instead of creating them internally. This means:
- *    - Tests can pass mock engines (no real AI needed)
+ *    - Tests can pass mock engines
  *    - Desktop passes node-llama-cpp, whisper.node, kokoro-js
  *    - Mobile passes llama.rn, whisper.rn, sherpa-onnx
  *    - The pipeline code is identical in all three cases
