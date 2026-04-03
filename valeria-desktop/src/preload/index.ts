@@ -1,22 +1,74 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+// src/preload/index.ts
 
-// Custom APIs for renderer
-const api = {}
+import { contextBridge, ipcRenderer } from 'electron'
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
+/**
+ * The preload script bridges the main and renderer processes.
+ *
+ * contextBridge.exposeInMainWorld() creates a property on the
+ * renderer's window object. The renderer can then call these
+ * methods as if they were normal JavaScript functions — but
+ * under the hood, each call crosses the process boundary via IPC.
+ *
+ * WHY NOT JUST EXPOSE ipcRenderer DIRECTLY?
+ * That would give the renderer full IPC access — it could send
+ * any message to any handler, including ones you didn't intend.
+ * By wrapping specific calls in named functions, you create a
+ * controlled API surface. The renderer can only do what you
+ * explicitly allow here.
+ */
+contextBridge.exposeInMainWorld('electronAPI', {
+  /**
+   * Echo test — invoke/handle pattern.
+   * Returns a Promise that resolves with the main process's response.
+   */
+  echo: (message: string): Promise<string> => {
+    return ipcRenderer.invoke('echo', message)
+  },
+
+  /**
+   * Start the streaming test — triggers token-by-token events.
+   * Returns a Promise with the final result (token count).
+   */
+  startStreamingTest: (): Promise<{ tokenCount: number }> => {
+    return ipcRenderer.invoke('start-streaming-test')
+  },
+
+  /**
+   * Listen for streamed tokens from the main process.
+   *
+   * This registers a callback that fires every time the main
+   * process sends a 'stream-token' event. Returns a cleanup
+   * function to remove the listener (prevents memory leaks).
+   *
+   * The cleanup function pattern is important — React components
+   * mount and unmount, and each mount registers a new listener.
+   * Without cleanup, you'd accumulate duplicate listeners.
+   */
+  onStreamToken: (callback: (token: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, token: string): void => {
+      callback(token)
+    }
+    ipcRenderer.on('stream-token', handler)
+
+    // Return cleanup function
+    return (): void => {
+      ipcRenderer.removeListener('stream-token', handler)
+    }
+  },
+
+  /**
+   * Listen for the stream-complete signal.
+   * Same pattern as onStreamToken.
+   */
+  onStreamComplete: (callback: () => void) => {
+    const handler = (): void => {
+      callback()
+    }
+    ipcRenderer.on('stream-complete', handler)
+
+    return (): void => {
+      ipcRenderer.removeListener('stream-complete', handler)
+    }
   }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+})
