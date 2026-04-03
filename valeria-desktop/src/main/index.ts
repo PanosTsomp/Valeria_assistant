@@ -1,8 +1,9 @@
 // src/main/index.ts
 
-import { app, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { join } from 'path';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 /**
  * Create the main application window.
@@ -140,3 +141,119 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+// ============================================================
+// AUDIO IPC HANDLERS
+// ============================================================
+
+/**
+ * Directory to store temporary audio files.
+ * app.getPath('userData') gives us the app's data directory:
+ * On Linux: ~/.config/valeria-desktop/
+ * This persists between app launches but is specific to this app.
+ */
+function getAudioDir(): string {
+  const dir = join(app.getPath('userData'), 'audio')
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+/**
+ * Receive recorded audio from the renderer and save as .wav file.
+ *
+ * The renderer sends a Float32Array of PCM samples at 16kHz mono.
+ * We wrap it in a WAV header and write to disk. This file can be:
+ * 1. Played back to verify the recording (this milestone)
+ * 2. Fed directly to whisper.cpp for transcription (milestone 6)
+ *
+ * WAV FORMAT:
+ * A .wav file is just raw audio samples with a 44-byte header that
+ * describes the format (sample rate, bit depth, channels). The header
+ * is a fixed structure — once you understand it, you can create .wav
+ * files from any raw audio data.
+ */
+ipcMain.handle('save-audio', async (_event, samples: number[]) => {
+  // The renderer sends a regular array (IPC can't transfer Float32Array
+  // directly in all Electron versions). Convert back to Float32Array.
+  const float32 = new Float32Array(samples)
+
+  const wavBuffer = createWavBuffer(float32, 16000)
+  const filePath = join(getAudioDir(), 'last-recording.wav')
+  writeFileSync(filePath, wavBuffer)
+
+  return { filePath, sampleCount: float32.length }
+})
+
+/**
+ * Get the path to the last recording for playback.
+ */
+ipcMain.handle('get-last-recording', async () => {
+  const filePath = join(getAudioDir(), 'last-recording.wav')
+  if (existsSync(filePath)) {
+    return filePath
+  }
+  return null
+})
+
+/**
+ * Create a WAV file buffer from raw PCM samples.
+ *
+ * WAV HEADER STRUCTURE (44 bytes):
+ * Bytes 0-3:   "RIFF" (file type identifier)
+ * Bytes 4-7:   File size minus 8 bytes
+ * Bytes 8-11:  "WAVE" (format identifier)
+ * Bytes 12-15: "fmt " (format chunk marker)
+ * Bytes 16-19: 16 (format chunk size)
+ * Bytes 20-21: 3 (audio format: 3 = IEEE float, 1 = PCM integer)
+ * Bytes 22-23: 1 (number of channels: 1 = mono)
+ * Bytes 24-27: Sample rate (16000)
+ * Bytes 28-31: Byte rate (sample rate × channels × bytes per sample)
+ * Bytes 32-33: Block align (channels × bytes per sample)
+ * Bytes 34-35: Bits per sample (32 for float)
+ * Bytes 36-39: "data" (data chunk marker)
+ * Bytes 40-43: Data size in bytes
+ * Bytes 44+:   The actual audio samples
+ *
+ * This is not a library — it's 44 bytes of binary. Understanding it
+ * demystifies audio files: they're just numbers with a label.
+ */
+function createWavBuffer(samples: Float32Array, sampleRate: number): Buffer {
+  const numChannels = 1
+  const bitsPerSample = 32
+  const bytesPerSample = bitsPerSample / 8
+  const blockAlign = numChannels * bytesPerSample
+  const byteRate = sampleRate * blockAlign
+  const dataSize = samples.length * bytesPerSample
+  const headerSize = 44
+  const fileSize = headerSize + dataSize
+
+  const buffer = Buffer.alloc(fileSize)
+
+  // RIFF header
+  buffer.write('RIFF', 0)
+  buffer.writeUInt32LE(fileSize - 8, 4)
+  buffer.write('WAVE', 8)
+
+  // fmt chunk
+  buffer.write('fmt ', 12)
+  buffer.writeUInt32LE(16, 16) // chunk size
+  buffer.writeUInt16LE(3, 20) // format: IEEE float
+  buffer.writeUInt16LE(numChannels, 22)
+  buffer.writeUInt32LE(sampleRate, 24)
+  buffer.writeUInt32LE(byteRate, 28)
+  buffer.writeUInt16LE(blockAlign, 32)
+  buffer.writeUInt16LE(bitsPerSample, 34)
+
+  // data chunk
+  buffer.write('data', 36)
+  buffer.writeUInt32LE(dataSize, 40)
+
+  // Write samples
+  for (let i = 0; i < samples.length; i++) {
+    buffer.writeFloatLE(samples[i], headerSize + i * bytesPerSample)
+  }
+
+  return buffer
+}
