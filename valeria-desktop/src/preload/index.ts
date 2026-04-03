@@ -70,5 +70,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return (): void => {
       ipcRenderer.removeListener('stream-complete', handler)
     }
+  },
+
+  /**
+   * Send recorded audio samples to the main process for saving.
+   * We convert Float32Array to a regular array for IPC transport.
+   */
+  saveAudio: (samples: Float32Array): Promise<{ filePath: string; sampleCount: number }> => {
+    return ipcRenderer.invoke('save-audio', Array.from(samples))
+  },
+
+  /**
+   * Get the file path of the last recording (for playback).
+   */
+  getLastRecording: (): Promise<string | null> => {
+    return ipcRenderer.invoke('get-last-recording')
   }
 })
