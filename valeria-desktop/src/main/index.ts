@@ -1,74 +1,142 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+// src/main/index.ts
+
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
 
-function createWindow(): void {
-  // Create the browser window.
+/**
+ * Create the main application window.
+ *
+ * BrowserWindow is Electron's window class. Each window gets its own
+ * renderer process (its own Chromium instance). Most apps have one
+ * window, but you could create multiple.
+ */
+function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    width: 500,
+    height: 700,
+    minWidth: 400,
+    minHeight: 500,
+    title: 'Valeria',
+    // webPreferences controls the renderer's capabilities
     webPreferences: {
+      // The preload script path — this runs before the page loads
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      // sandbox: true means the renderer has NO Node.js access
+      // (this is the default in modern Electron, but being explicit)
+      sandbox: true
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
+  // In development, load from the Vite dev server (hot reloading)
+  // In production, load from the built HTML file
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  return mainWindow
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+// ============================================================
+// IPC HANDLERS
+// ============================================================
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+/**
+ * Echo handler — a simple round-trip test.
+ *
+ * ipcMain.handle() registers a handler for invoke-style IPC.
+ * When the renderer calls window.electronAPI.echo("hello"),
+ * this function runs in the main process and the return value
+ * is sent back to the renderer as the resolved Promise.
+ *
+ * This is the "invoke/handle" pattern — like a function call
+ * across processes. The renderer invokes, the main handles.
+ */
+ipcMain.handle('echo', async (_event, message: string) => {
+  // In a real app, this is where you'd do heavy work:
+  // transcribe audio, run the LLM, read files, etc.
+  // For now, just echo the message back.
+  return `Main process received: "${message}"`
+})
+
+/**
+ * Streaming test handler — simulates how LLM tokens will flow.
+ *
+ * Unlike echo (which returns one value), this sends multiple
+ * events over time using webContents.send(). The renderer
+ * listens for these events and displays each one as it arrives.
+ *
+ * This is the "send/on" pattern — like a live stream.
+ * The main process sends whenever it wants, the renderer listens.
+ *
+ * In milestone 7, this exact pattern will stream LLM tokens.
+ */
+ipcMain.handle('start-streaming-test', async (event) => {
+  const sender = event.sender
+  const tokens = [
+    'Hello',
+    ',',
+    ' I',
+    ' am',
+    ' Valeria',
+    '.',
+    ' How',
+    ' can',
+    ' I',
+    ' help',
+    ' you',
+    ' today',
+    '?'
+  ]
+
+  for (const token of tokens) {
+    // Send each token to the renderer with a small delay
+    // to simulate real LLM generation speed
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    sender.send('stream-token', token)
+  }
+
+  // Signal that streaming is complete
+  sender.send('stream-complete')
+  return { tokenCount: tokens.length }
+})
+
+// ============================================================
+// APP LIFECYCLE
+// ============================================================
+
+/**
+ * app.whenReady() resolves when Electron has finished initializing.
+ * This is where you create windows and set up the app.
+ */
+app.whenReady().then(() => {
+  // Set the app user model ID (for Linux/Windows notifications)
+  electronApp.setAppUserModelId('com.valeria.assistant')
+
+  // Watch for new windows and optimize them
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
   createWindow()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  // On macOS, re-create the window when the dock icon is clicked
+  // and no windows are open (standard macOS behavior)
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+/**
+ * Quit the app when all windows are closed.
+ * Exception: on macOS, apps stay active until Cmd+Q.
+ */
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
