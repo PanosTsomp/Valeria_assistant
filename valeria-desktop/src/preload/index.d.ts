@@ -15,8 +15,9 @@ declare global {
       startStreamingTest: () => Promise<{ tokenCount: number }>
       onStreamToken: (callback: (token: string) => void) => () => void
       onStreamComplete: (callback: () => void) => () => void
-      saveAudio: (samples: Float32Array) => Promise<{ filePath: string; sampleCount: number }>;
-      getLastRecording: () => Promise<string | null>;
+      saveAudio: (samples: Float32Array) => Promise<{ filePath: string; sampleCount: number }>
+      getLastRecording: () => Promise<string | null>
+      readAudioFile: () => Promise<number[] | null>
     }
   }
 }

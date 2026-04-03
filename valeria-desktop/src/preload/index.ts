@@ -85,5 +85,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   getLastRecording: (): Promise<string | null> => {
     return ipcRenderer.invoke('get-last-recording')
+  },
+
+  readAudioFile: (): Promise<number[] | null> => {
+    return ipcRenderer.invoke('read-audio-file');
   }
 })

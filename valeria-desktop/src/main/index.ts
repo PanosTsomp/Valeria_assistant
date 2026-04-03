@@ -1,9 +1,9 @@
 // src/main/index.ts
 
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { join } from 'path';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
-import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { join } from 'path'
+import { writeFileSync, existsSync, mkdirSync } from 'fs'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 /**
  * Create the main application window.
@@ -257,3 +257,14 @@ function createWavBuffer(samples: Float32Array, sampleRate: number): Buffer {
 
   return buffer
 }
+
+ipcMain.handle('read-audio-file', async () => {
+  const filePath = join(getAudioDir(), 'last-recording.wav')
+  if (existsSync(filePath)) {
+    const { readFileSync } = await import('fs')
+    const buffer = readFileSync(filePath)
+    // Convert to regular array for IPC transport
+    return Array.from(new Uint8Array(buffer))
+  }
+  return null
+})
