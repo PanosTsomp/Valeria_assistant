@@ -91,40 +91,35 @@ function App(): React.JSX.Element {
    * recording pipeline is working end-to-end.
    */
   const handlePlayback = useCallback(async () => {
-    if (!savedFilePath) return
-
+    if (!savedFilePath) return;
     try {
-      setIsPlaying(true)
+      setIsPlaying(true);
 
-      // Read the file through the main process
-      const filePath = await window.electronAPI.getLastRecording()
-      if (!filePath) {
-        setAudioStatus('No recording found.')
-        setIsPlaying(false)
-        return
+      const audioBytes = await window.electronAPI.readAudioFile();
+      if (!audioBytes) {
+        setAudioStatus('No recording found.');
+        setIsPlaying(false);
+        return;
       }
 
-      // Fetch the file using file:// protocol
-      // Note: In Electron, file:// access depends on security settings.
-      // If this doesn't work, we'll add an IPC channel to read the file.
-      const response = await fetch(`file://${filePath}`)
-      const arrayBuffer = await response.arrayBuffer()
+      const uint8 = new Uint8Array(audioBytes);
+      const arrayBuffer = uint8.buffer.slice(0);
 
-      const audioContext = new AudioContext()
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+      const audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      const source = audioContext.createBufferSource()
-      source.buffer = audioBuffer
-      source.connect(audioContext.destination)
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
       source.onended = () => {
-        setIsPlaying(false)
-        audioContext.close()
-      }
-      source.start(0)
+        setIsPlaying(false);
+        audioContext.close();
+      };
+      source.start(0);
     } catch (err) {
-      console.error('Playback error:', err)
-      setAudioStatus(`Playback error: ${err instanceof Error ? err.message : 'unknown'}`)
-      setIsPlaying(false)
+      console.error('Playback error:', err);
+      setAudioStatus(`Playback error: ${err instanceof Error ? err.message : 'unknown'}`);
+      setIsPlaying(false);
     }
   }, [savedFilePath])
 
