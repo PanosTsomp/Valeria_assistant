@@ -45,7 +45,7 @@ export class WhisperService {
     const startTime = Date.now();
 
     this.context = await initWhisper({
-      model: this.modelPath,
+      filePath: this.modelPath,
       useGpu: true,
     });
 
