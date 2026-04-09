@@ -4,6 +4,8 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { writeFileSync, existsSync, mkdirSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { WhisperService } from './whisper-service';
+
 
 /**
  * Create the main application window.
@@ -112,25 +114,37 @@ ipcMain.handle('start-streaming-test', async (event) => {
  * app.whenReady() resolves when Electron has finished initializing.
  * This is where you create windows and set up the app.
  */
-app.whenReady().then(() => {
-  // Set the app user model ID (for Linux/Windows notifications)
-  electronApp.setAppUserModelId('com.valeria.assistant')
+// Global Whisper service
+let whisperService: WhisperService | null = null;
 
-  // Watch for new windows and optimize them
+app.whenReady().then(async () => {
+  electronApp.setAppUserModelId('com.valeria.assistant');
+
   app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+    optimizer.watchWindowShortcuts(window);
+  });
 
-  createWindow()
+  // Initialize Whisper
+  // Use app.getAppPath() to find the models directory relative to the app
+  // During development, this is the project root
+  const modelPath = join(app.getAppPath(), 'models', 'ggml-base.en.bin');
 
-  // On macOS, re-create the window when the dock icon is clicked
-  // and no windows are open (standard macOS behavior)
+  try {
+    whisperService = new WhisperService(modelPath);
+    await whisperService.initialize();
+    console.log('Whisper ready!');
+  } catch (err) {
+    console.error('Failed to initialize Whisper:', err);
+  }
+
+  createWindow();
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow();
     }
-  })
-})
+  });
+});
 
 /**
  * Quit the app when all windows are closed.
@@ -159,6 +173,35 @@ function getAudioDir(): string {
   }
   return dir
 }
+
+// ============================================================
+// WHISPER IPC HANDLER
+// ============================================================
+
+/**
+ * Transcribe audio samples using Whisper.
+ * 
+ * Receives Float32Array samples (as a regular number array via IPC),
+ * passes them to WhisperService, returns the transcript text.
+ */
+ipcMain.handle(
+  'transcribe-audio',
+  async (_event, samples: number[]) => {
+    if (!whisperService) {
+      return { error: 'Whisper not initialized', text: '' };
+    }
+
+    try {
+      const float32 = new Float32Array(samples);
+      const text = await whisperService.transcribe(float32);
+      return { text, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Transcription failed';
+      console.error('Transcription error:', message);
+      return { text: '', error: message };
+    }
+  }
+);
 
 /**
  * Receive recorded audio from the renderer and save as .wav file.
@@ -268,3 +311,9 @@ ipcMain.handle('read-audio-file', async () => {
   }
   return null
 })
+
+app.on('before-quit', async () => {
+  if (whisperService) {
+    await whisperService.dispose();
+  }
+});
