@@ -17,6 +17,11 @@ function App(): React.JSX.Element {
   const [savedFilePath, setSavedFilePath] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
 
+  // Transcription state (milestone 6)
+  const [transcript, setTranscript] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribeTime, setTranscribeTime] = useState(0);
+
   // ============================================================
   // ECHO (from milestone 4)
   // ============================================================
@@ -58,30 +63,49 @@ function App(): React.JSX.Element {
 
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
-      setAudioStatus('Processing audio...')
-      const samples = await stopRecording()
+      setAudioStatus('Processing audio...');
+      const samples = await stopRecording();
 
       if (samples) {
-        setAudioStatus(
-          `Captured ${samples.length} samples (${(samples.length / 16000).toFixed(1)}s). Saving...`
-        )
+        const duration = (samples.length / 16000).toFixed(1);
+        setAudioStatus(`Captured ${samples.length} samples (${duration}s). Saving...`);
 
-        // Send to main process for saving
-        const result = await window.electronAPI.saveAudio(samples)
-        setSavedFilePath(result.filePath)
-        setAudioStatus(
-          `Saved! ${result.sampleCount} samples (${(result.sampleCount / 16000).toFixed(1)}s) → ${result.filePath}`
-        )
+        // Save the audio file
+        const saveResult = await window.electronAPI.saveAudio(samples);
+        setSavedFilePath(saveResult.filePath);
+
+        // Transcribe with Whisper
+        setIsTranscribing(true);
+        setTranscript('');
+        setAudioStatus(`Saved! Now transcribing ${duration}s of audio...`);
+
+        const startTime = Date.now();
+        const result = await window.electronAPI.transcribeAudio(samples);
+        const elapsed = Date.now() - startTime;
+        setTranscribeTime(elapsed);
+
+        setIsTranscribing(false);
+
+        if (result.error) {
+          setAudioStatus(`Transcription error: ${result.error}`);
+        } else if (result.text) {
+          setTranscript(result.text);
+          setAudioStatus(`Transcribed in ${elapsed}ms`);
+        } else {
+          setAudioStatus('No speech detected.');
+        }
       } else {
-        setAudioStatus('No audio captured.')
+        setAudioStatus('No audio captured.');
       }
     } else {
-      setAudioStatus('')
-      setSavedFilePath('')
-      await startRecording()
-      setAudioStatus('Recording...')
+      setAudioStatus('');
+      setSavedFilePath('');
+      setTranscript('');
+      setTranscribeTime(0);
+      await startRecording();
+      setAudioStatus('Recording... (speak now)');
     }
-  }, [isRecording, startRecording, stopRecording])
+  }, [isRecording, startRecording, stopRecording]);
 
   /**
    * Playback: read the saved .wav file and play it in the browser.

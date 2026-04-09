@@ -18,6 +18,7 @@ declare global {
       saveAudio: (samples: Float32Array) => Promise<{ filePath: string; sampleCount: number }>
       getLastRecording: () => Promise<string | null>
       readAudioFile: () => Promise<number[] | null>
+      transcribeAudio: (samples: Float32Array) => Promise<{ text: string; error: string | null }>
     }
   }
 }

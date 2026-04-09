@@ -80,13 +80,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke('save-audio', Array.from(samples));
   },
 
+  // === Whisper transcription (milestone 6) ===
+  transcribeAudio: (samples: Float32Array): Promise<{ text: string; error: string | null }> => {
+    return ipcRenderer.invoke('transcribe-audio', Array.from(samples));
+  },
+
   /**
    * Get the file path of the last recording (for playback).
    */
   getLastRecording: (): Promise<string | null> => {
     return ipcRenderer.invoke('get-last-recording');
   },
-  
+
   readAudioFile: (): Promise<number[] | null> => {
     return ipcRenderer.invoke('read-audio-file');
   }
