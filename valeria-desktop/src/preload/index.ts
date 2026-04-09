@@ -77,17 +77,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * We convert Float32Array to a regular array for IPC transport.
    */
   saveAudio: (samples: Float32Array): Promise<{ filePath: string; sampleCount: number }> => {
-    return ipcRenderer.invoke('save-audio', Array.from(samples))
+    return ipcRenderer.invoke('save-audio', Array.from(samples));
   },
 
   /**
    * Get the file path of the last recording (for playback).
    */
   getLastRecording: (): Promise<string | null> => {
-    return ipcRenderer.invoke('get-last-recording')
+    return ipcRenderer.invoke('get-last-recording');
   },
-
+  
   readAudioFile: (): Promise<number[] | null> => {
     return ipcRenderer.invoke('read-audio-file');
   }
+
+  
 })

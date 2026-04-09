@@ -103,7 +103,7 @@ function App(): React.JSX.Element {
       }
 
       const uint8 = new Uint8Array(audioBytes);
-      const arrayBuffer = uint8.buffer.slice(0);
+      const arrayBuffer = uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
 
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
