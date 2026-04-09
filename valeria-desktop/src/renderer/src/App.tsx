@@ -241,6 +241,28 @@ function App(): React.JSX.Element {
               {isPlaying ? 'Playing...' : 'Play back'}
             </button>
           )}
+           {isTranscribing && (
+          <div style={{ ...infoBoxStyle, color: '#ffd54f' }}>
+            Transcribing with Whisper...
+          </div>
+        )}
+
+        {transcript && (
+          <div style={{
+            marginTop: 12,
+            padding: '14px 16px',
+            background: '#1a2e1a',
+            borderRadius: 8,
+            borderLeft: '3px solid #4caf50',
+          }}>
+            <div style={{ fontSize: 12, color: '#4caf50', marginBottom: 6, fontWeight: 500 }}>
+              TRANSCRIPT ({transcribeTime}ms)
+            </div>
+            <div style={{ fontSize: 15, color: '#c8e6c9', lineHeight: 1.6 }}>
+              {transcript}
+            </div>
+          </div>
+        )}
         </div>
 
         {recordError && (
