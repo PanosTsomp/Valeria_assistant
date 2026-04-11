@@ -47,7 +47,7 @@ export class WhisperService {
     this.context = await initWhisper({
     filePath: this.modelPath,
     useGpu: true,
-    }, 'vulkan');
+    }, 'cuda');
 
     const elapsed = Date.now() - startTime;
     console.log(`Whisper model loaded in ${elapsed}ms`);
