@@ -57,6 +57,61 @@ function App(): React.JSX.Element {
     }
   }, [])
 
+  // Chat state (milestone 7)
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<
+    Array<{ role: 'user' | 'assistant'; content: string }>
+  >([]);
+  const [currentResponse, setCurrentResponse] = useState('');
+  const [isChatting, setIsChatting] = useState(false);
+
+  // ============================================================
+  // CHAT (milestone 7)
+  // ============================================================
+
+  const handleChatSend = useCallback(async () => {
+    if (chatInput.trim() === '' || isChatting) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setCurrentResponse('');
+    setIsChatting(true);
+
+    // Add user message to display
+    setChatMessages((prev) => [
+      ...prev,
+      { role: 'user', content: userMessage },
+    ]);
+
+    // Send to LLM
+    const result = await window.electronAPI.chatSend(userMessage);
+
+    // Add assistant response to display
+    if (result.response) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: result.response },
+      ]);
+    }
+
+    setCurrentResponse('');
+    setIsChatting(false);
+  }, [chatInput, isChatting]);
+
+  // Listen for streaming tokens
+  useEffect(() => {
+    const cleanupToken = window.electronAPI.onChatToken((token) => {
+      setCurrentResponse((prev) => prev + token);
+    });
+    const cleanupComplete = window.electronAPI.onChatComplete(() => {
+      // Completion is handled in handleChatSend
+    });
+    return () => {
+      cleanupToken();
+      cleanupComplete();
+    };
+  }, []);
+
   // ============================================================
   // AUDIO RECORDING (new in milestone 5)
   // ============================================================
