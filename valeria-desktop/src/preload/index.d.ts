@@ -19,6 +19,9 @@ declare global {
       getLastRecording: () => Promise<string | null>
       readAudioFile: () => Promise<number[] | null>
       transcribeAudio: (samples: Float32Array) => Promise<{ text: string; error: string | null }>
+      chatSend: (message: string) => Promise<{ response: string; error: string | null }>
+      onChatToken: (callback: (token: string) => void) => () => void
+      onChatComplete: (callback: () => void) => () => void
     }
   }
 }

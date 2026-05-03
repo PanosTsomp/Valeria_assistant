@@ -94,7 +94,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   readAudioFile: (): Promise<number[] | null> => {
     return ipcRenderer.invoke('read-audio-file');
-  }
+  },
+
+  // === LLM chat channels (milestone 7) ===
+  chatSend: (message: string): Promise<{ response: string; error: string | null }> => {
+    return ipcRenderer.invoke('chat-send', message);
+  },
+
+  onChatToken: (callback: (token: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, token: string): void => {
+      callback(token);
+    };
+    ipcRenderer.on('chat-token', handler);
+    return (): void => {
+      ipcRenderer.removeListener('chat-token', handler);
+    };
+  },
+
+  onChatComplete: (callback: () => void) => {
+    const handler = (): void => {
+      callback();
+    };
+    ipcRenderer.on('chat-complete', handler);
+    return (): void => {
+      ipcRenderer.removeListener('chat-complete', handler);
+    };
+  },
 
   
 })
