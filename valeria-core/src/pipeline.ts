@@ -1,4 +1,4 @@
-import { Message, STTEngine, LLMEngine, TTSEngine } from './types.js';
+import { STTEngine, LLMEngine, TTSEngine } from './types.js';
 import { Conversation } from './conversation.js';
 import { SentenceBuffer } from './sentence-buffer.js';
 

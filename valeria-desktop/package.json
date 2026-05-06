@@ -25,6 +25,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@fugood/whisper.node": "^1.0.18",
+    "@valeria/core": "file:../valeria-core",
     "electron-updater": "^6.3.9",
     "node-llama-cpp": "^3.18.1",
     "react-router-dom": "^7.14.2"

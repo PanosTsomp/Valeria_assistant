@@ -70,6 +70,21 @@ function App(): React.JSX.Element {
           Valeria
         </h1>
 
+        {!window.electronAPI && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '8px 14px',
+              background: '#7f1d1d',
+              borderRadius: 8,
+              fontSize: 13,
+              color: '#fca5a5',
+            }}
+          >
+            ⚠ Electron preload not connected — open this in the Electron app, not a browser.
+          </div>
+        )}
+
         <nav style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
           <NavLink to="/" end style={navLinkStyle}>
             Chat

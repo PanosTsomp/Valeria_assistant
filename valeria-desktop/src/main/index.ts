@@ -6,7 +6,10 @@ import { writeFileSync, existsSync, mkdirSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { WhisperService } from './whisper-service';
 import { LLMService } from './llm-service';
+import { Conversation } from '@valeria/core';
+
 let llmService: LLMService | null = null;
+let conversation: Conversation | null = null;
 
 
 /**
@@ -127,29 +130,31 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  // Initialize Whisper (existing code)
   const whisperModelPath = join(app.getAppPath(), 'models', 'ggml-tiny.en.bin');
   try {
-    whisperService = new WhisperService(whisperModelPath);
-    await whisperService.initialize();
+    whisperService = new WhisperService();
+    await whisperService.initialize(whisperModelPath);
     console.log('Whisper ready!');
   } catch (err) {
     console.error('Failed to initialize Whisper:', err);
   }
 
-  // Initialize LLM
-  const llmModelPath = join(
-    app.getAppPath(),
-    'models',
-    'Phi-3.5-mini-instruct-Q4_K_M.gguf'
-  );
+  const llmModelPath = join(app.getAppPath(), 'models', 'Phi-3.5-mini-instruct-Q4_K_M.gguf');
   try {
-    llmService = new LLMService(llmModelPath);
-    await llmService.initialize();
+    llmService = new LLMService();
+    await llmService.initialize({
+      modelPath: llmModelPath,
+      contextSize: 2048,
+      gpuLayers: 0,
+      temperature: 0.7,
+      maxTokens: 512,
+    });
     console.log('LLM ready!');
   } catch (err) {
     console.error('Failed to initialize LLM:', err);
   }
+
+  conversation = new Conversation();
 
   createWindow();
 
@@ -339,30 +344,31 @@ ipcMain.handle('read-audio-file', async () => {
 ipcMain.handle(
   'chat-send',
   async (event, message: string) => {
-    if (!llmService) {
+    if (!llmService || !conversation) {
       return { error: 'LLM not initialized', response: '' };
     }
 
     const sender = event.sender;
 
+    conversation.addMessage('user', message);
+
     try {
       let fullResponse = '';
 
-      for await (const token of llmService.generateStream(message)) {
+      for await (const token of llmService.generateStream(conversation.getMessages())) {
         fullResponse += token;
-        // Stream each token to the renderer
         sender.send('chat-token', token);
       }
 
-      // Signal completion
+      conversation.addMessage('assistant', fullResponse);
       sender.send('chat-complete');
 
       return { response: fullResponse, error: null };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Generation failed';
-      console.error('Chat error:', message);
+      const errMsg = err instanceof Error ? err.message : 'Generation failed';
+      console.error('Chat error:', errMsg);
       sender.send('chat-complete');
-      return { response: '', error: message };
+      return { response: '', error: errMsg };
     }
   }
 );

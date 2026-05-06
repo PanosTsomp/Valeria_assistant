@@ -21,7 +21,7 @@ export function useChat(): UseChatReturn {
   const [isChatting, setIsChatting] = useState(false)
 
   const handleChatSend = useCallback(async () => {
-    if (chatInput.trim() === '' || isChatting) return
+    if (chatInput.trim() === '' || isChatting || !window.electronAPI) return
 
     const userMessage = chatInput.trim()
     setChatInput('')
@@ -41,6 +41,7 @@ export function useChat(): UseChatReturn {
   }, [chatInput, isChatting])
 
   useEffect(() => {
+    if (!window.electronAPI) return
     const cleanupToken = window.electronAPI.onChatToken((token) => {
       setCurrentResponse((prev) => prev + token)
     })

@@ -9,12 +9,13 @@ export default function DevPage(): React.JSX.Element {
   const [tokenCount, setTokenCount] = useState(0)
 
   const handleEcho = useCallback(async () => {
-    if (echoInput.trim() === '') return
+    if (echoInput.trim() === '' || !window.electronAPI) return
     const response = await window.electronAPI.echo(echoInput)
     setEchoResponse(response)
   }, [echoInput])
 
   const handleStreamingTest = useCallback(async () => {
+    if (!window.electronAPI) return
     setStreamedText('')
     setIsStreaming(true)
     setTokenCount(0)
@@ -23,6 +24,7 @@ export default function DevPage(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
+    if (!window.electronAPI) return
     const cleanupToken = window.electronAPI.onStreamToken((token) => {
       setStreamedText((prev) => prev + token)
     })

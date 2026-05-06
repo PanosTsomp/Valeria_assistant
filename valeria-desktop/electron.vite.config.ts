@@ -4,11 +4,21 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    // Dependencies are externalized by default in electron-vite v5
-    // node-llama-cpp will NOT be bundled — this is what we want
+    resolve: {
+      alias: {
+        '@valeria/core': resolve('../valeria-core/src/index.ts')
+      }
+    }
   },
   preload: {
-    // Also externalized by default
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js'
+        }
+      }
+    }
   },
   renderer: {
     resolve: {

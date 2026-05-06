@@ -24,6 +24,7 @@ export function useTranscription(): UseTranscriptionReturn {
   const [transcribeTime, setTranscribeTime] = useState(0)
 
   const handleToggleRecording = useCallback(async () => {
+    if (!window.electronAPI) return
     if (isRecording) {
       setAudioStatus('Processing audio...')
       const samples = await stopRecording()
