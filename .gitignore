@@ -22,8 +22,10 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+CLAUDE.md
 
 # AI models (too large for git — downloaded at runtime)
 *.bin
 *.gguf
 *.onnx
+
