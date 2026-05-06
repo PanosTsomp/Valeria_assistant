@@ -1,8 +1,45 @@
+import { Component, type ReactNode } from 'react'
 import { MemoryRouter, Routes, Route, NavLink } from 'react-router-dom'
 import ChatPage from './pages/ChatPage'
 import AudioPage from './pages/AudioPage'
 import DevPage from './pages/DevPage'
 import { colors } from './styles/theme'
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          style={{
+            padding: 24,
+            color: '#ef5350',
+            fontFamily: 'monospace',
+            fontSize: 13,
+            background: '#1a1a2e',
+            minHeight: '100vh',
+          }}
+        >
+          <strong style={{ fontSize: 16 }}>Render error</strong>
+          <pre style={{ marginTop: 12, whiteSpace: 'pre-wrap' }}>{this.state.error.message}</pre>
+          <pre style={{ marginTop: 8, color: '#888', whiteSpace: 'pre-wrap' }}>
+            {this.state.error.stack}
+          </pre>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const navLinkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties => ({
   padding: '6px 16px',
@@ -16,6 +53,7 @@ const navLinkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties 
 
 function App(): React.JSX.Element {
   return (
+    <ErrorBoundary>
     <MemoryRouter>
       <div
         style={{
@@ -64,6 +102,7 @@ function App(): React.JSX.Element {
         `}</style>
       </div>
     </MemoryRouter>
+    </ErrorBoundary>
   )
 }
 
