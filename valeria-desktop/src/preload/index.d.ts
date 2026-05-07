@@ -22,6 +22,7 @@ declare global {
       chatSend: (message: string) => Promise<{ response: string; error: string | null }>
       onChatToken: (callback: (token: string) => void) => () => void
       onChatComplete: (callback: () => void) => () => void
+      ttsSynthesize: (text: string) => Promise<{ samples: number[] | null; sampleRate: number; error: string | null; }>;
     }
   }
 }
