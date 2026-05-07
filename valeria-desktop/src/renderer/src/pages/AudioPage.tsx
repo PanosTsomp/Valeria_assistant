@@ -1,4 +1,5 @@
 import { useTranscription } from '../hooks/useTranscription'
+import { useTTS } from '../hooks/useTTS';
 import { sectionStyle, headingStyle, buttonStyle, infoBoxStyle, colors } from '../styles/theme'
 
 export default function AudioPage(): React.JSX.Element {
