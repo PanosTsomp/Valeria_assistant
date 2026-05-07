@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranscription } from '../hooks/useTranscription'
 import { useTTS } from '../hooks/useTTS';
 import { sectionStyle, headingStyle, buttonStyle, infoBoxStyle, colors } from '../styles/theme'
@@ -15,6 +16,9 @@ export default function AudioPage(): React.JSX.Element {
     handleToggleRecording,
     handlePlayback,
   } = useTranscription()
+
+  const { speak, stop, isSpeaking, ttsError } = useTTS();
+  const [ttsInput, setTtsInput] = useState('');
 
   return (
     <div style={sectionStyle}>
@@ -43,6 +47,39 @@ export default function AudioPage(): React.JSX.Element {
           )}
           {isRecording ? 'Stop recording' : 'Start recording'}
         </button>
+
+        <div style={sectionStyle}>
+          <h2 style={headingStyle}>Text-to-Speech test</h2>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={ttsInput}
+              onChange={(e) => setTtsInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isSpeaking) speak(ttsInput);
+              }}
+              placeholder="Type something for Valeria to say..."
+              style={{
+                flex: 1, padding: '10px 14px', borderRadius: 8,
+                border: `1px solid ${colors.border}`, background: colors.inputBg,
+                color: colors.text, fontSize: 14, outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => isSpeaking ? stop() : speak(ttsInput)}
+              style={buttonStyle(false, isSpeaking ? colors.red : colors.purple)}
+            >
+              {isSpeaking ? 'Stop' : 'Speak'}
+            </button>
+          </div>
+
+          {ttsError && (
+            <div style={{ ...infoBoxStyle, color: '#ef5350' }}>
+              TTS Error: {ttsError}
+            </div>
+          )}
+        </div>
 
         {savedFilePath && (
           <button
