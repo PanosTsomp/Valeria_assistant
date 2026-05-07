@@ -385,7 +385,38 @@ ipcMain.handle(
   }
 );
 
+// ============================================================
+// TTS IPC HANDLER
+// ============================================================
 
+/**
+ * Synthesize text to speech and return audio samples.
+ * 
+ * The renderer sends text, the main process synthesizes it,
+ * and returns the audio samples + sample rate for playback.
+ */
+ipcMain.handle(
+  'tts-synthesize',
+  async (_event, text: string) => {
+    if (!ttsService) {
+      return { error: 'TTS not initialized', samples: null, sampleRate: 24000 };
+    }
+
+    try {
+      const samples = await ttsService.synthesize(text);
+      return {
+        // Convert Float32Array to regular array for IPC transport
+        samples: Array.from(samples),
+        sampleRate: ttsService.getSampleRate(),
+        error: null,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'TTS failed';
+      console.error('TTS error:', message);
+      return { samples: null, sampleRate: 24000, error: message };
+    }
+  }
+);
 
 app.on('before-quit', async () => {
   if (whisperService) {
