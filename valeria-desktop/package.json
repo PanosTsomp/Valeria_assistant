@@ -27,6 +27,7 @@
     "@fugood/whisper.node": "^1.0.18",
     "@valeria/core": "file:../valeria-core",
     "electron-updater": "^6.3.9",
+    "kokoro-js": "^1.2.1",
     "node-llama-cpp": "^3.18.1",
     "react-router-dom": "^7.14.2"
   },
