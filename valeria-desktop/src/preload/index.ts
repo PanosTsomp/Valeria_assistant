@@ -121,5 +121,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     };
   },
 
+    // === TTS channels (milestone 8) ===
+  ttsSynthesize: (text: string): Promise<{
+    samples: number[] | null;
+    sampleRate: number;
+    error: string | null;
+  }> => {
+    return ipcRenderer.invoke('tts-synthesize', text);
+  },
+
   
 })
