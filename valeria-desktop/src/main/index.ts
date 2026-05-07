@@ -7,9 +7,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { WhisperService } from './whisper-service';
 import { LLMService } from './llm-service';
 import { Conversation } from '@valeria/core';
+import { TTSService } from './tts-service';
 
 let llmService: LLMService | null = null;
 let conversation: Conversation | null = null;
+let ttsService: TTSService | null = null;
 
 
 /**
@@ -152,6 +154,16 @@ app.whenReady().then(async () => {
     console.log('LLM ready!');
   } catch (err) {
     console.error('Failed to initialize LLM:', err);
+  }
+
+  // Initialize TTS
+  try {
+    ttsService = new TTSService();
+    await ttsService.initialize();
+    ttsService.setVoice('af_sky'); // Warm American female voice
+    console.log('TTS ready!');
+  } catch (err) {
+    console.error('Failed to initialize TTS:', err);
   }
 
   conversation = new Conversation();
@@ -373,13 +385,16 @@ ipcMain.handle(
   }
 );
 
+
+
 app.on('before-quit', async () => {
   if (whisperService) {
-    await whisperService.dispose();
+    whisperService.dispose();
   }
   if (llmService) {
-    await llmService.dispose();
+    llmService.dispose();
   }
+  if (ttsService) ttsService.dispose();
 });
 
 
