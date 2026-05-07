@@ -160,7 +160,7 @@ app.whenReady().then(async () => {
   try {
     ttsService = new TTSService();
     await ttsService.initialize();
-    ttsService.setVoice('af_sky'); // Warm American female voice
+    ttsService.setVoice('af_heart');
     console.log('TTS ready!');
   } catch (err) {
     console.error('Failed to initialize TTS:', err);
